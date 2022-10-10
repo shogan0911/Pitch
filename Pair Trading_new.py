@@ -98,10 +98,12 @@ for q in range(len(company_by_naics_code)):
 
     ticker_symbol_ph = []
 
-
-
-
 #%%
+
+# (Probably not the most effective method) Because I need to make combinations of the various stock tickers for the
+# ADF test, I determine what stocks are still in "ticker_trading_days" and copy the stock tickers and keep them
+# seperated by NAICS code. I then create the combinations and put them in a nested list. After that, the stock daily
+# prices are combined with their respective stocks.
 
 a_ph = []
 a = []
@@ -114,43 +116,50 @@ for i in range(len(company_by_naics_code)):
     a.append(a_ph)
     a_ph = []
 
-#%%
 
-
-q = list(itertools.permutations(a[0], 2))
 
 #%%
+permutations = []
+
+for i in range(len(a)):
+
+    q = list(itertools.permutations(a[i], 2))
+    permutations.append(q)
+
 
 p = []
 p_ph = []
-for i in range(len(q)):
-    for k in range(len(q[i])):
-        p_ph.append(q[i][k])
-    p.append(p_ph)
-    p_ph = []
+for i in range(len(permutations)):
+    for k in range(len(permutations[i])):
+        for t in range(len(permutations[i][k])):
+
+            p_ph.append(permutations[i][k][t])
+        p.append(p_ph)
+        p_ph = []
 
 
 #%%
 
 o = []
 o_ph = []
-for t in range(len(p)):
-    for r in range(len(p[t])):
-        o_ph.append(ticker_trading_days[0][p[t][r]])
-    o.append(o_ph)
-    o_ph = []
-#%%
+for y in range(len(permutations)):
+    for t in range(len(permutations[y])):
+        for r in range(len(permutations[y][t])):
+            o_ph.append(ticker_trading_days[y][permutations[y][t][r]])
+        o.append(o_ph)
+        o_ph = []
 
 df = pd.DataFrame((p, o)).transpose()
+
 
 #%%
 
 f = 0
 g = []
 
-while f<= len(df.iloc[:,0])-1:
-    s = (df.iloc[f,1])[0]
-    s1 = (df.iloc[f,1][1])
+while f <= len(df.iloc[:, 0]) - 1:
+    s = (df.iloc[f, 1])[0]
+    s1 = (df.iloc[f, 1][1])
     print(s)
     print(s1)
 
@@ -158,17 +167,52 @@ while f<= len(df.iloc[:,0])-1:
     e = a.fit()
     t = list(e.resid)
 
-
-
     g.append(t)
 
     f = f + 1
 
+#%%
 
+passed = []
 
-
+df_ph = pd.DataFrame(df.iloc[:, 0])
+g_ph = pd.DataFrame(g)
+df_residuals = pd.concat([df_ph, g_ph], axis=1, ignore_index='True')
 
 
 #%%
 
-print(s)
+for i in range(len(df_residuals.iloc[:, 0])):
+    n = ts.adfuller(df_residuals.iloc[i, 1:])
+
+    if n[0] < n[4]['5%']:
+
+        if n[0] < n[4]['1%']:
+            passed.append('Superior Pass')
+        else:
+            passed.append('Passed')
+
+    else:
+        passed.append('Failed')
+
+
+#%%
+
+df_pass_fail_ph = pd.DataFrame(passed)
+df_pass_fail = pd.concat([df_ph, df_pass_fail_ph], axis=1, ignore_index='True').rename(columns={0: 'Pair', 1: 'Status'})
+
+
+#%%
+
+
+superior_pass_df = df_pass_fail.loc[df_pass_fail['Status'] == 'Superior Pass']
+superior_pass_df = superior_pass_df.sort_values(by=['Pair']).reset_index(drop='True')
+
+#%%
+
+excel_superior_pass_df = pd.DataFrame(superior_pass_df['Pair'].to_list(), columns=['Stock A', 'Stock B'])
+excel_superior_pass_df = pd.concat([excel_superior_pass_df, superior_pass_df['Status']], axis=1)
+
+
+#%%
+excel_superior_pass_df.to_excel(r'C:\Users\scteh\Desktop\Pair_Trade_Candidates.xlsx')
