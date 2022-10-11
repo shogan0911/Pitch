@@ -5,6 +5,7 @@ import requests
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
 from itertools import permutations
+import openpyxl
 #%%
 # The specific stocks are being read from "pair_trade_data.csv" into a DataFrame.
 # The stocks are then grouped by NAICS code.
@@ -215,4 +216,4 @@ excel_superior_pass_df = pd.concat([excel_superior_pass_df, superior_pass_df['St
 
 
 #%%
-excel_superior_pass_df.to_excel(r'C:\Users\scteh\Desktop\Pair_Trade_Candidates.xlsx')
+excel_superior_pass_df.to_excel('Pair_Trade_Candidates.xlsx', index='False')
