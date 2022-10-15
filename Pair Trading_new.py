@@ -1,11 +1,9 @@
 import itertools
-
 import pandas as pd
 import requests
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
-from itertools import permutations
-import openpyxl
+
 #%%
 # The specific stocks are being read from "pair_trade_data.csv" into a DataFrame.
 # The stocks are then grouped by NAICS code.
@@ -44,7 +42,7 @@ for q in range(len(company_by_naics_code)):
 
         ticker = company_by_naics_code[q][e]
         stock_price_data = requests.get(
-            'https://api.polygon.io/v2/aggs/ticker/' + ticker + '/range/1/day/2020-09-28/2022-09-30?adjusted=true&sort=asc&apiKey=x4kfbN2sNWrGtNGbEQT8ORSlLfxoSkx3').json()
+            'https://api.polygon.io/v2/aggs/ticker/' + ticker + '/range/1/day/2021-10-10/2022-10-10?adjusted=true&sort=asc&apiKey=x4kfbN2sNWrGtNGbEQT8ORSlLfxoSkx3').json()
 
         for i in range(len(stock_price_data['results'])):
             daily_close = stock_price_data['results'][i]['c']
@@ -188,13 +186,12 @@ for i in range(len(df_residuals.iloc[:, 0])):
 
     if n[0] < n[4]['5%']:
 
-        if n[0] < n[4]['1%']:
-            passed.append('Superior Pass')
-        else:
-            passed.append('Passed')
+        passed.append('Passed')
+        print('Passed')
 
     else:
         passed.append('Failed')
+        print('Failed')
 
 
 #%%
@@ -202,14 +199,8 @@ for i in range(len(df_residuals.iloc[:, 0])):
 df_pass_fail_ph = pd.DataFrame(passed)
 df_pass_fail = pd.concat([df_ph, df_pass_fail_ph], axis=1, ignore_index='True').rename(columns={0: 'Pair', 1: 'Status'})
 
-
-#%%
-
-
-superior_pass_df = df_pass_fail.loc[df_pass_fail['Status'] == 'Superior Pass']
+superior_pass_df = df_pass_fail.loc[df_pass_fail['Status'] == 'Passed']
 superior_pass_df = superior_pass_df.sort_values(by=['Pair']).reset_index(drop='True')
-
-#%%
 
 excel_superior_pass_df = pd.DataFrame(superior_pass_df['Pair'].to_list(), columns=['Stock A', 'Stock B'])
 excel_superior_pass_df = pd.concat([excel_superior_pass_df, superior_pass_df['Status']], axis=1)
@@ -217,3 +208,36 @@ excel_superior_pass_df = pd.concat([excel_superior_pass_df, superior_pass_df['St
 
 #%%
 excel_superior_pass_df.to_excel('Pair_Trade_Candidates.xlsx', index='False')
+
+#%%
+
+south_west = requests.get('https://api.polygon.io/v2/aggs/ticker/LUV/range/1/day/2021-10-10/2022-10-10?'
+                          'adjusted=true&sort=asc&limit=5000&apiKey=x4kfbN2sNWrGtNGbEQT8ORSlLfxoSkx3').json()
+
+south_west_close = []
+for x in range(len(south_west['results'])):
+    south_west_close_ph = south_west['results'][x]['c']
+    south_west_close.append(south_west_close_ph)
+
+#%%
+
+delta = requests.get('https://api.polygon.io/v2/aggs/ticker/DAL/range/1/day/2021-10-10/2022-10-10?'
+                          'adjusted=true&sort=asc&limit=5000&apiKey=x4kfbN2sNWrGtNGbEQT8ORSlLfxoSkx3').json()
+
+delta_close = []
+for x in range(len(delta['results'])):
+    delta_close_ph = delta['results'][x]['c']
+    delta_close.append(delta_close_ph)
+
+
+#%%
+
+hedge = sm.OLS(south_west_close, delta_close)
+hedge_r = hedge.fit()
+print(hedge_r.summary())
+
+#%%
+
+hedge = sm.OLS(delta_close, south_west_close)
+hedge_r = hedge.fit()
+print(hedge_r.summary())
